@@ -1,5 +1,6 @@
 import os
 import posixpath
+import subprocess
 
 from docutils import nodes, utils
 from docutils import nodes
@@ -111,7 +112,7 @@ def get_image_filename(self, uri, diagram):
 
     return refer_path, render_path
 
-def create_graphics(self, zargo_uri, diagram_name, render_path, format='svg'):
+def create_graphics(self, zargo_uri, diagram_name, render_path):
     """
     Use ArgoUML in batch mode to render a named diagram from a zargo file into
     graphics of the specified format.
@@ -128,11 +129,22 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, format='svg'):
     Raises:
         PhixError: If the graphics could not be rendered.
     """
+    
     print "create_graphics()"
     print "zargo_uri =", zargo_uri
     print "diagram_name =", diagram_name
     print "render_path =", render_path
-    print "format =", format
+    command = [r"C:\Program Files (x86)\Java\jre1.6.0\bin\javaw.exe",
+               "-Xms64m", "-Xmx512m",
+               "-jar", r"C:\Program Files (x86)\ArgoUML\argouml.jar",
+               "-batch",
+               "-command", "org.argouml.uml.ui.ActionOpenProject=%s" % str(zargo_uri),
+               "-command", "org.argouml.ui.cmd.ActionGotoDiagram=%s" % str(diagram_name),
+               "-command", "org.argouml.uml.ui.ActionSaveGraphics=%s" % str(render_path)]
+    print "command =", command
+    returncode = subprocess.call(command)
+    print "returncode =", returncode
+
     
 def render_html(self, node):
     has_thumbnail = False
