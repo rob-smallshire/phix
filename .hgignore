@@ -1,0 +1,21 @@
+syntax: glob
+# Python development
+*.pyc
+
+# Distutils
+MANIFEST
+build/*
+dist/*
+*.egg-info/*
+
+# PyCharm
+.idea
+*.iml
+
+# virtualenv
+Lib/*
+Scripts/*
+
+syntax: regexp
+.*~
+
