@@ -1,3 +1,5 @@
+import os
+import posixpath
 
 from docutils import nodes, utils
 from docutils import nodes
@@ -6,13 +8,16 @@ from docutils.nodes import fully_normalize_name, whitespace_normalize_name
 from docutils.parsers.rst.roles import set_classes
 
 from sphinx.util.compat import Directive
+from sphinx.util.osutil import ensuredir
 from sphinx.errors import SphinxError
 
 class PhixError(SphinxError):
     category = 'Phix error'
 
 class argouml(nodes.General, nodes.Element):
-    pass
+    
+    def astext(self):
+        return self.get('alt', '')
     
 # TODO: visit_argouml_node, depart_todo_node ?
     
@@ -38,7 +43,6 @@ class ArgoUmlDirective(Directive):
                    'width': directives.length_or_percentage_or_unitless,
                    'scale': directives.percentage,
                    'align': align,
-                   'target': directives.unchanged_required,
                    'class': directives.class_option}
     
     
@@ -64,34 +68,108 @@ class ArgoUmlDirective(Directive):
                        '", "'.join(self.align_h_values)))
         messages = []
         reference = directives.uri(self.arguments[0])
-        self.options['uri'] = reference
-        reference_node = None
-        if 'target' in self.options:
-            block = states.escape2null(
-                self.options['target']).splitlines()
-            block = [line for line in block]
-            target_type, data = self.state.parse_target(
-                block, self.block_text, self.lineno)
-            if target_type == 'refuri':
-                reference_node = nodes.reference(refuri=data)
-            elif target_type == 'refname':
-                reference_node = nodes.reference(
-                    refname=fully_normalize_name(data),
-                    name=whitespace_normalize_name(data))
-                reference_node.indirect_reference_name = data
-                self.state.document.note_refname(reference_node)
-            else:                           # malformed target
-                messages.append(data)       # data is a system message
-            del self.options['target']
+        diagram = self.arguments[1]
         set_classes(self.options)
-        image_node = nodes.image(self.block_text, **self.options)
-        if reference_node:
-            reference_node += image_node
-            return messages + [reference_node]
-        else:
-            return messages + [image_node]
+        print "self.block_text =", self.block_text
+        print "self.options =", self.options    
+        argouml_node = argouml(self.block_text, **self.options)
+        argouml_node['uri'] = reference
+        argouml_node['diagram'] = diagram
+        return messages + [argouml_node]
 
+def get_image_filename(self, uri, diagram):
+    """
+    Get paths of output file.
+    
+    Args:
+        uri: The URI of the source ArgoUML file
+        
+        diagram: The name of theh diagram within the ArgoUML file to be rendered.
+    
+    Returns:
+        A 2-tuple containing two paths.  The first is a relative URI which can
+        be used in the output HTML to refer to the produced image file. The
+        second is an absolute path to which the generated image should be rendered.
+    """
+    uri_dirname, uri_filename = os.path.split(uri)
+    uri_basename, uri_ext = os.path.splitext(uri_filename)
+    fname = '%s-%s.svg' % (uri_basename, diagram.replace(' ', '_'))
+    print "fname =", fname
+    if hasattr(self.builder, 'imgpath'):
+        # HTML
+        refer_path = posixpath.join(self.builder.imgpath, fname)
+        render_path = os.path.join(self.builder.outdir, '_images', fname)
+    else:
+        # LaTeX
+        refer_path = fname
+        render_path = os.path.join(self.builder.outdir, fname)
+
+    if os.path.isfile(render_path):
+        return refer_path, render_path
+
+    ensuredir(os.path.dirname(render_path))
+
+    return refer_path, render_path
+
+def create_graphics(self, zargo_uri, diagram_name, render_path, format='svg'):
+    """
+    Use ArgoUML in batch mode to render a named diagram from a zargo file into
+    graphics of the specified format.
+    
+    Args:
+        zargo_uri:  The path to the ArgoUML zargo file.
+        
+        diagram_name: A string containing the diagram name.
+        
+        render_path: The path to which the graphics output is to be rendered.
+        
+        format: The graphics format to be used. Default is svg.
+    
+    Raises:
+        PhixError: If the graphics could not be rendered.
+    """
+    print "create_graphics()"
+    print "zargo_uri =", zargo_uri
+    print "diagram_name =", diagram_name
+    print "render_path =", render_path
+    print "format =", format
+    
+def render_html(self, node):
+    has_thumbnail = False
+    
+    try:
+        refer_path, render_path = get_image_filename(self, node['uri'], node['diagram'])
+        print "refer_path =", refer_path
+        print "render_path =", render_path
+        if not os.path.isfile(render_path):
+            create_graphics(self, node['uri'], node['diagram'], render_path)
+    except PhixError, exc:
+        print 'Could not render %s because %s' % (node['uri'], str(exc))
+        self.builder.warn('Could not render %s because %s' % (node['uri'], str(exc)))
+        raise nodes.SkipNode
+
+    #self.body.append(self.starttag(node, 'p', CLASS='graphviz'))
+    #if relfn is None:
+    #    self.body.append(self.encode(code))
+    #else:
+    #    if alt is None:
+    #        alt = node.get('alt', self.encode(code).strip())
+    #
+    #    imgtag_format = '<img src="%s" alt="%s" />\n'
+    #    self.body.append(imgtag_format % (relfn, alt))
+
+    #self.body.append('</p>\n')
+    raise nodes.SkipNode
+        
+def html_visit_argouml(self, node):
+    render_html(self, node)
+
+def latex_visit_argouml(self, node):
+    render_latex(self, node, node['code'], node['options'])
+    
 def setup(app):
-    app.add_node(argouml)
+    app.add_node(argouml,
+        html=(html_visit_argouml, None))
+        #latex=(latex_visit_argouml, None))
     app.add_directive('argouml', ArgoUmlDirective)
 
