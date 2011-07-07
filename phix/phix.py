@@ -44,6 +44,8 @@ class ArgoUmlDirective(Directive):
     
     
     def run(self):
+        print "self.arguments[0] =", self.arguments[0]
+        print "self.arguments[1] =", self.arguments[1]
         if 'align' in self.options:
             if isinstance(self.state, states.SubstitutionDef):
                 # Check for align_v_values.
