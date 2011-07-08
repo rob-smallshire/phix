@@ -26,7 +26,7 @@ class argouml(nodes.General, nodes.Element):
 # TODO: visit_argouml_node, depart_todo_node ?
     
 class ArgoUmlDirective(Directive):
-    # http://docutils.sourceforge.net/docs/howto/rst-directives.html
+    # <http://docutils.sourceforge.net/docs/howto/rst-directives.html>
 
     align_h_values = ('left', 'center', 'right')
     align_v_values = ('top', 'middle', 'bottom')
@@ -49,6 +49,7 @@ class ArgoUmlDirective(Directive):
                    'width': directives.length_or_percentage_or_unitless,
                    'scale': directives.percentage,
                    'align': align,
+                   'border': directives.positive_int,
                    'class': directives.class_option}
     
     def run(self):
@@ -65,12 +66,7 @@ class ArgoUmlDirective(Directive):
         
         # Get the name of the diagram from the required :diagram: option
         diagram = self.options['diagram']
-        
-        # Get the :pipe: option if present
-        if 'pipe' in self.options:
-            pipe_command = self.options['pipe']
-            print "pipe_command = ", pipe_command
-        
+                
         # Validate the :align: option
         if 'align' in self.options:
             if isinstance(self.state, states.SubstitutionDef):
@@ -88,7 +84,7 @@ class ArgoUmlDirective(Directive):
                     'the "align" option.  Valid values for "align" are: "%s".'
                     % (self.name, self.options['align'],
                        '", "'.join(self.align_h_values)))
-
+                       
         set_classes(self.options)
         
         print "self.block_text =", self.block_text
@@ -99,7 +95,9 @@ class ArgoUmlDirective(Directive):
         argouml_node['diagram'] = diagram
         argouml_node['width'] = self.options['width'] if 'width' in self.options else '100%'
         argouml_node['height'] = self.options['height'] if 'height' in self.options else '100%'
+        argouml_node['border'] = self.options['border'] if 'border' in self.options else 0
         argouml_node['pipe_command'] = self.options['pipe'] if 'pipe' in self.options else None
+        
         return messages + [argouml_node]
 
 # compatibility to sphinx 1.0 (ported from sphinx trunk)
@@ -262,8 +260,8 @@ def render_html(self, node):
 
     self.body.append(self.starttag(node, 'p', CLASS='argouml'))
 
-    objtag_format = '<object data="%s" width="%s" height="%s" type="image/svg+xml" class="img">\n'
-    self.body.append(objtag_format % (refer_path, node['width'], node['height']))
+    objtag_format = '<object data="%s" width="%s" height="%s" border="%s" type="image/svg+xml" class="img">\n'
+    self.body.append(objtag_format % (refer_path, node['width'], node['height'], node['border']))
     self.body.append('</object>')
     self.body.append('</p>\n')
     raise nodes.SkipNode
