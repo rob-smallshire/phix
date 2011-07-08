@@ -38,10 +38,11 @@ class ArgoUmlDirective(Directive):
         return directives.choice(argument, Image.align_values)
 
     has_content = False
-    required_arguments = 2
+    required_arguments = 1
     optional_arguments = 0
     final_argument_whitespace = True
-    option_spec = {'alt': directives.unchanged,
+    option_spec = {'diagram': directives.unchanged_required,
+                   'alt': directives.unchanged,
                    'height': directives.length_or_unitless,
                    'width': directives.length_or_percentage_or_unitless,
                    'scale': directives.percentage,
@@ -52,7 +53,7 @@ class ArgoUmlDirective(Directive):
     
     def run(self):
         print "self.arguments[0] =", self.arguments[0]
-        print "self.arguments[1] =", self.arguments[1]
+        #print "self.arguments[1] =", self.arguments[1]
         if 'align' in self.options:
             if isinstance(self.state, states.SubstitutionDef):
                 # Check for align_v_values.
@@ -77,7 +78,7 @@ class ArgoUmlDirective(Directive):
         #print "rel_filename = ", os.path.normpath(rel_filename)
         print "filename = ", filename
         
-        diagram = self.arguments[1]
+        diagram = self.options['diagram']
         set_classes(self.options)
         print "self.block_text =", self.block_text
         print "self.options =", self.options    
