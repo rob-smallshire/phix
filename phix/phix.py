@@ -3,6 +3,7 @@ import posixpath
 import subprocess
 import shlex
 import platform
+import tempfile
 
 from docutils import nodes, utils
 from docutils import nodes
@@ -42,6 +43,7 @@ class ArgoUmlDirective(Directive):
     optional_arguments = 0
     final_argument_whitespace = True
     option_spec = {'diagram': directives.unchanged_required,
+                   'pipe'   : directives.unchanged,
                    'alt': directives.unchanged,
                    'height': directives.length_or_unitless,
                    'width': directives.length_or_percentage_or_unitless,
@@ -49,11 +51,27 @@ class ArgoUmlDirective(Directive):
                    'align': align,
                    'class': directives.class_option}
     
-    
-    
     def run(self):
         print "self.arguments[0] =", self.arguments[0]
-        #print "self.arguments[1] =", self.arguments[1]
+
+        messages = []
+        
+        # Get the one and only argument of the directive which contains the
+        # name of the ArgoUML zargo file.
+        reference = directives.uri(self.arguments[0])
+        env = self.state.document.settings.env
+        _, filename = relfn2path(env, reference)
+        print "filename = ", filename
+        
+        # Get the name of the diagram from the required :diagram: option
+        diagram = self.options['diagram']
+        
+        # Get the :pipe: option if present
+        if 'pipe' in self.options:
+            pipe_command = self.options['pipe']
+            print "pipe_command = ", pipe_command
+        
+        # Validate the :align: option
         if 'align' in self.options:
             if isinstance(self.state, states.SubstitutionDef):
                 # Check for align_v_values.
@@ -70,23 +88,18 @@ class ArgoUmlDirective(Directive):
                     'the "align" option.  Valid values for "align" are: "%s".'
                     % (self.name, self.options['align'],
                        '", "'.join(self.align_h_values)))
-        messages = []
-        reference = directives.uri(self.arguments[0])
-        
-        env = self.state.document.settings.env
-        rel_filename, filename = relfn2path(env, reference)
-        #print "rel_filename = ", os.path.normpath(rel_filename)
-        print "filename = ", filename
-        
-        diagram = self.options['diagram']
+
         set_classes(self.options)
+        
         print "self.block_text =", self.block_text
-        print "self.options =", self.options    
+        print "self.options =", self.options
+        
         argouml_node = argouml(self.block_text, **self.options)
         argouml_node['uri'] = os.path.normpath(filename)
         argouml_node['diagram'] = diagram
         argouml_node['width'] = self.options['width'] if 'width' in self.options else '100%'
         argouml_node['height'] = self.options['height'] if 'height' in self.options else '100%'
+        argouml_node['pipe_command'] = self.options['pipe'] if 'pipe' in self.options else None
         return messages + [argouml_node]
 
 # compatibility to sphinx 1.0 (ported from sphinx trunk)
@@ -139,7 +152,7 @@ def get_image_filename(self, uri, diagram):
 
     return refer_path, render_path
 
-def create_graphics(self, zargo_uri, diagram_name, render_path):
+def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=None):
     """
     Use ArgoUML in batch mode to render a named diagram from a zargo file into
     graphics of the specified format.
@@ -151,7 +164,9 @@ def create_graphics(self, zargo_uri, diagram_name, render_path):
         
         render_path: The path to which the graphics output is to be rendered.
         
-        format: The graphics format to be used. Default is svg.
+        pipe_command: An optional command into which the ArgoUML SVG output will
+           be piped before it is placed in the output document.  The command
+           should accept SVG on stdin and produce SVG on stdout.
     
     Raises:
         PhixError: If the graphics could not be rendered.
@@ -162,14 +177,48 @@ def create_graphics(self, zargo_uri, diagram_name, render_path):
     print "diagram_name =", diagram_name
     print "render_path =", render_path
 
+    output_path = render_path if pipe_command is None else temp_path('.svg')
+    print "output_path =", output_path
+    
+    # Launch ArgoUML and instruct it to export the requested diagram as SVG
     args = ['-batch',
             '-command', 'org.argouml.uml.ui.ActionOpenProject=%s' % str(zargo_uri),
             '-command', 'org.argouml.ui.cmd.ActionGotoDiagram=%s' % str(diagram_name),
-            '-command', 'org.argouml.uml.ui.ActionSaveGraphics=%s' % str(render_path)]
+            '-command', 'org.argouml.uml.ui.ActionSaveGraphics=%s' % str(output_path)]
     command = argouml_command() + args
     print "command =", command
     returncode = subprocess.call(command, shell=True)
     print "returncode =", returncode
+    if returncode != 0:
+        raise PhixError("Could not launch ArgoUML with command %s" % ' '.join(command))
+        
+    # If a pipe command has been specified
+    if pipe_command is not None:
+        print "pipe_command =", pipe_command
+        pipe_command_fragments = shlex.split(str(pipe_command), posix=False)
+        print "pipe_command_fragments =", pipe_command_fragments
+        with file(output_path, 'rb') as intermediate_file:
+            with file(render_path, 'wb') as render_file:
+                returncode = subprocess.call(pipe_command_fragments, stdin=intermediate_file, stdout=render_file, shell=True)
+                print "returncode =", returncode
+                if returncode != 0:
+                    raise PhixError("Could not launch pipe with command %s" % ' '.join(pipe_command))
+            
+        
+    
+def temp_path(suffix=''):
+    '''Return a path to a temporary file. It is the responsibility of the
+    calling code to ensure that the file is deleted.
+    
+    Args:
+        suffix: Optional suffix for the temp file name.
+    '''
+    # It's not obvious that this is the 'right way to do it' in Python
+    # <http://stackoverflow.com/questions/5545473/temporary-shelves/5545638#5545638>
+    fd, filename = tempfile.mkstemp(suffix)
+    os.close(fd)
+    return filename
+    
 
 def argouml_command():
     '''Get a command for launching ArgoUML.
@@ -205,7 +254,7 @@ def render_html(self, node):
         print "render_path =", render_path
         print "node['uri'] =", node['uri']
         #if not os.path.isfile(render_path):
-        create_graphics(self, node['uri'], node['diagram'], render_path)
+        create_graphics(self, node['uri'], node['diagram'], render_path, node['pipe'])
     except PhixError, exc:
         print 'Could not render %s because %s' % (node['uri'], str(exc))
         self.builder.warn('Could not render %s because %s' % (node['uri'], str(exc)))
@@ -213,7 +262,6 @@ def render_html(self, node):
 
     self.body.append(self.starttag(node, 'p', CLASS='argouml'))
 
-    alt = "Blah"
     objtag_format = '<object data="%s" width="%s" height="%s" type="image/svg+xml" class="img">\n'
     self.body.append(objtag_format % (refer_path, node['width'], node['height']))
     self.body.append('</object>')
