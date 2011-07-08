@@ -1,6 +1,8 @@
 import os
 import posixpath
 import subprocess
+import shlex
+import platform
 
 from docutils import nodes, utils
 from docutils import nodes
@@ -69,15 +71,37 @@ class ArgoUmlDirective(Directive):
                        '", "'.join(self.align_h_values)))
         messages = []
         reference = directives.uri(self.arguments[0])
+        
+        env = self.state.document.settings.env
+        rel_filename, filename = relfn2path(env, reference)
+        #print "rel_filename = ", os.path.normpath(rel_filename)
+        print "filename = ", filename
+        
         diagram = self.arguments[1]
         set_classes(self.options)
         print "self.block_text =", self.block_text
         print "self.options =", self.options    
         argouml_node = argouml(self.block_text, **self.options)
-        argouml_node['uri'] = reference
+        argouml_node['uri'] = os.path.normpath(filename)
         argouml_node['diagram'] = diagram
         return messages + [argouml_node]
 
+# compatibility to sphinx 1.0 (ported from sphinx trunk)
+def relfn2path(env, filename, docname=None):
+    if filename.startswith('/') or filename.startswith(os.sep):
+        rel_fn = filename[1:]
+    else:
+        docdir = os.path.dirname(env.doc2path(docname or env.docname,
+                                              base=None))
+        rel_fn = os.path.join(docdir, filename)
+    try:
+        return rel_fn, os.path.join(env.srcdir, rel_fn)
+    except UnicodeDecodeError:
+        # the source directory is a bytestring with non-ASCII characters;
+        # let's try to encode the rel_fn in the file system encoding
+        enc_rel_fn = rel_fn.encode(sys.getfilesystemencoding())
+        return rel_fn, os.path.join(env.srcdir, enc_rel_fn)
+        
 def get_image_filename(self, uri, diagram):
     """
     Get paths of output file.
@@ -134,17 +158,40 @@ def create_graphics(self, zargo_uri, diagram_name, render_path):
     print "zargo_uri =", zargo_uri
     print "diagram_name =", diagram_name
     print "render_path =", render_path
-    command = [r"C:\Program Files (x86)\Java\jre1.6.0\bin\javaw.exe",
-               "-Xms64m", "-Xmx512m",
-               "-jar", r"C:\Program Files (x86)\ArgoUML\argouml.jar",
-               "-batch",
-               "-command", "org.argouml.uml.ui.ActionOpenProject=%s" % str(zargo_uri),
-               "-command", "org.argouml.ui.cmd.ActionGotoDiagram=%s" % str(diagram_name),
-               "-command", "org.argouml.uml.ui.ActionSaveGraphics=%s" % str(render_path)]
+
+    args = ['-batch',
+            '-command', 'org.argouml.uml.ui.ActionOpenProject=%s' % str(zargo_uri),
+            '-command', 'org.argouml.ui.cmd.ActionGotoDiagram=%s' % str(diagram_name),
+            '-command', 'org.argouml.uml.ui.ActionSaveGraphics=%s' % str(render_path)]
+    command = argouml_command() + args
     print "command =", command
-    returncode = subprocess.call(command)
+    returncode = subprocess.call(command, shell=True)
     print "returncode =", returncode
 
+def argouml_command():
+    '''Get a command for launching ArgoUML.
+    
+    Returns a list based on the ARGOUML_LAUNCH environment variable is set, this
+    will be used as the basis for the list of arguments that is returned.
+    Otherwise, it takes a guess at something that will work for the platform.
+    
+    Returns:
+        A list of command line arguments - the first of which is an executable
+        name or alias - which when passed to a shell can be used to launch
+        argouml.
+    '''
+    if 'ARGOUML_LAUNCH' in os.environ:
+        return shlex.split(os.environ['ARGOUML_LAUNCH'])
+        
+    if platform.system() == 'Windows':
+        # This is the location used by the ArgoUML installer for Windows
+        # It requires that 'java' is available on the syatem %PATH%.
+        return [r"java",
+               "-Xms64m", "-Xmx512m",
+               "-jar", r"C:\Program Files (x86)\ArgoUML\argouml.jar"]
+               
+    return ['argouml']
+    
     
 def render_html(self, node):
     has_thumbnail = False
@@ -153,8 +200,9 @@ def render_html(self, node):
         refer_path, render_path = get_image_filename(self, node['uri'], node['diagram'])
         print "refer_path =", refer_path
         print "render_path =", render_path
-        if not os.path.isfile(render_path):
-            create_graphics(self, node['uri'], node['diagram'], render_path)
+        print "node['uri'] =", node['uri']
+        #if not os.path.isfile(render_path):
+        create_graphics(self, node['uri'], node['diagram'], render_path)
     except PhixError, exc:
         print 'Could not render %s because %s' % (node['uri'], str(exc))
         self.builder.warn('Could not render %s because %s' % (node['uri'], str(exc)))
