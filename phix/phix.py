@@ -84,6 +84,8 @@ class ArgoUmlDirective(Directive):
         argouml_node = argouml(self.block_text, **self.options)
         argouml_node['uri'] = os.path.normpath(filename)
         argouml_node['diagram'] = diagram
+        argouml_node['width'] = self.options['width'] if 'width' in self.options else '100%'
+        argouml_node['height'] = self.options['height'] if 'height' in self.options else '100%'
         return messages + [argouml_node]
 
 # compatibility to sphinx 1.0 (ported from sphinx trunk)
@@ -208,17 +210,13 @@ def render_html(self, node):
         self.builder.warn('Could not render %s because %s' % (node['uri'], str(exc)))
         raise nodes.SkipNode
 
-    #self.body.append(self.starttag(node, 'p', CLASS='graphviz'))
-    #if relfn is None:
-    #    self.body.append(self.encode(code))
-    #else:
-    #    if alt is None:
-    #        alt = node.get('alt', self.encode(code).strip())
-    #
-    #    imgtag_format = '<img src="%s" alt="%s" />\n'
-    #    self.body.append(imgtag_format % (relfn, alt))
+    self.body.append(self.starttag(node, 'p', CLASS='argouml'))
 
-    #self.body.append('</p>\n')
+    alt = "Blah"
+    objtag_format = '<object data="%s" width="%s" height="%s" type="image/svg+xml" class="img">\n'
+    self.body.append(objtag_format % (refer_path, node['width'], node['height']))
+    self.body.append('</object>')
+    self.body.append('</p>\n')
     raise nodes.SkipNode
         
 def html_visit_argouml(self, node):
