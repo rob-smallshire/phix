@@ -201,6 +201,9 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=Non
                 print "returncode =", returncode
                 if returncode != 0:
                     raise PhixError("Could not launch pipe with command %s" % ' '.join(pipe_command))
+        if os.path.exists(output_path):
+            print "Removing", output_path
+            os.remove(output_path)
             
         
     
