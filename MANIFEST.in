@@ -1,2 +1,2 @@
-recursive-include docs *.html *.css *.png
+recursive-include docs *.html *.css *.png *.js
 
