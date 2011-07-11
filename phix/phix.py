@@ -23,7 +23,7 @@ class PhixError(SphinxError):
 
     
 class argouml(nodes.General, nodes.Element):
-    '''A docutils node representing an ArgoUML diagram''''
+    '''A docutils node representing an ArgoUML diagram'''
     
     def astext(self):
         '''
@@ -206,7 +206,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=Non
     Raises:
         PhixError: If the graphics could not be rendered.
     '''
-    
+        
     print "create_graphics()"
     print "zargo_uri =", zargo_uri
     print "diagram_name =", diagram_name
@@ -251,7 +251,7 @@ def temp_path(suffix=''):
     Args:
         suffix: Optional suffix for the temp file name.
     '''
-    # It's not obvious that this is the 'right way to do it' in Python
+    # It's not obvious that this is the 'right way to do it' in Python, but see
     # <http://stackoverflow.com/questions/5545473/temporary-shelves/5545638#5545638>
     fd, filename = tempfile.mkstemp(suffix)
     os.close(fd)
