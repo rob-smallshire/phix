@@ -62,6 +62,7 @@ class ArgoUmlDirective(Directive):
     
     option_spec = {'diagram': directives.unchanged_required,
                    'postprocess'   : directives.unchanged,
+                   'new-window' : directives.flag,
                    'alt': directives.unchanged,
                    'height': directives.length_or_unitless,
                    'width': directives.length_or_percentage_or_unitless,
@@ -119,7 +120,8 @@ class ArgoUmlDirective(Directive):
         argouml_node['height'] = self.options['height'] if 'height' in self.options else '100%'
         argouml_node['border'] = self.options['border'] if 'border' in self.options else 0
         argouml_node['postprocess_command'] = self.options['postprocess'] if 'postprocess' in self.options else None
-        
+        argouml_node['new_window_flag'] = 'new-window' in self.options
+        print "argouml_node['new_window_flag'] =", argouml_node['new_window_flag']
         return messages + [argouml_node]
 
         
@@ -318,6 +320,13 @@ def render_html(self, node):
     objtag_format = '<object data="%s" width="%s" height="%s" border="%s" type="image/svg+xml" class="img">\n'
     self.body.append(objtag_format % (refer_path, node['width'], node['height'], node['border']))
     self.body.append('</object>')
+    
+    if node['new_window_flag']:
+        self.body.append('<p align="right">\n')
+        new_window_tag_format = '<a href="%s" target="_blank">Open in new window</a>'
+        self.body.append(new_window_tag_format % refer_path)
+        self.body.append('</p>\n')
+    
     self.body.append('</p>\n')
     raise nodes.SkipNode
 
