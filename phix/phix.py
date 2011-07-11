@@ -61,7 +61,7 @@ class ArgoUmlDirective(Directive):
     final_argument_whitespace = True
     
     option_spec = {'diagram': directives.unchanged_required,
-                   'pipe'   : directives.unchanged,
+                   'postprocess'   : directives.unchanged,
                    'alt': directives.unchanged,
                    'height': directives.length_or_unitless,
                    'width': directives.length_or_percentage_or_unitless,
@@ -118,11 +118,11 @@ class ArgoUmlDirective(Directive):
         argouml_node['width'] = self.options['width'] if 'width' in self.options else '100%'
         argouml_node['height'] = self.options['height'] if 'height' in self.options else '100%'
         argouml_node['border'] = self.options['border'] if 'border' in self.options else 0
-        argouml_node['pipe_command'] = self.options['pipe'] if 'pipe' in self.options else None
+        argouml_node['postprocess_command'] = self.options['postprocess'] if 'postprocess' in self.options else None
         
         return messages + [argouml_node]
 
-# compatibility to sphinx 1.0 (ported from sphinx trunk)
+        
 def relfn2path(env, filename, docname=None):
     '''Convert a filename into a relatve path and an absolute path.
     
@@ -138,6 +138,7 @@ def relfn2path(env, filename, docname=None):
         A 2-tuple containing in the first element the relative path to filename
         from the document path, and in the second element       
     '''
+    # compatibility to sphinx 1.0 (ported from sphinx trunk)
     if filename.startswith('/') or filename.startswith(os.sep):
         rel_fn = filename[1:]
     else:
@@ -151,6 +152,7 @@ def relfn2path(env, filename, docname=None):
         # let's try to encode the rel_fn in the file system encoding
         enc_rel_fn = rel_fn.encode(sys.getfilesystemencoding())
         return rel_fn, os.path.join(env.srcdir, enc_rel_fn)
+
         
 def get_image_filename(self, uri, diagram):
     '''
@@ -187,7 +189,8 @@ def get_image_filename(self, uri, diagram):
 
     return refer_path, render_path
 
-def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=None):
+    
+def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_command=None):
     '''
     Use ArgoUML in batch mode to render a named diagram from a zargo file into
     graphics of the specified format.
@@ -199,9 +202,9 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=Non
         
         render_path: The path to which the graphics output is to be rendered.
         
-        pipe_command: An optional command into which the ArgoUML SVG output will
-           be piped before it is placed in the output document.  The command
-           should accept SVG on stdin and produce SVG on stdout.
+        postprocess_command: An optional command into which the ArgoUML SVG
+           output will be piped before it is placed in the output document.
+           The command should accept SVG on stdin and produce SVG on stdout.
     
     Raises:
         PhixError: If the graphics could not be rendered.
@@ -212,7 +215,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=Non
     print "diagram_name =", diagram_name
     print "render_path =", render_path
 
-    output_path = render_path if pipe_command is None else temp_path('.svg')
+    output_path = render_path if postprocess_command is None else temp_path('.svg')
     print "output_path =", output_path
     
     # Launch ArgoUML and instruct it to export the requested diagram as SVG
@@ -227,23 +230,22 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=Non
     if returncode != 0:
         raise PhixError("Could not launch ArgoUML with command %s" % ' '.join(command))
         
-    # If a pipe command has been specified
-    if pipe_command is not None:
-        print "pipe_command =", pipe_command
-        pipe_command_fragments = shlex.split(str(pipe_command), posix=False)
-        print "pipe_command_fragments =", pipe_command_fragments
+    # If a postprocess command has been specified
+    if postprocess_command is not None:
+        print "postprocess_command =", postprocess_command
+        postprocess_command_fragments = shlex.split(str(postprocess_command), posix=False)
+        print "postprocess_command_fragments =", postprocess_command_fragments
         with file(output_path, 'rb') as intermediate_file:
             with file(render_path, 'wb') as render_file:
-                returncode = subprocess.call(pipe_command_fragments, stdin=intermediate_file, stdout=render_file, shell=True)
+                returncode = subprocess.call(postprocess_command_fragments, stdin=intermediate_file, stdout=render_file, shell=True)
                 print "returncode =", returncode
                 if returncode != 0:
-                    raise PhixError("Could not launch pipe with command %s" % ' '.join(pipe_command))
+                    raise PhixError("Could not launch postprocess with command %s" % ' '.join(postprocess_command))
         if os.path.exists(output_path):
             print "Removing", output_path
             os.remove(output_path)
             
-        
-    
+            
 def temp_path(suffix=''):
     '''Return a path to a temporary file. It is the responsibility of the
     calling code to ensure that the file is deleted.
@@ -305,7 +307,7 @@ def render_html(self, node):
         print "render_path =", render_path
         print "node['uri'] =", node['uri']
         #if not os.path.isfile(render_path):
-        create_graphics(self, node['uri'], node['diagram'], render_path, node['pipe'])
+        create_graphics(self, node['uri'], node['diagram'], render_path, node['postprocess'])
     except PhixError, exc:
         print 'Could not render %s because %s' % (node['uri'], str(exc))
         self.builder.warn('Could not render %s because %s' % (node['uri'], str(exc)))
@@ -318,14 +320,17 @@ def render_html(self, node):
     self.body.append('</object>')
     self.body.append('</p>\n')
     raise nodes.SkipNode
-        
+
+    
 def html_visit_argouml(self, node):
     '''Visit an argouml node during HTML rendering.'''
     render_html(self, node)
 
+    
 def latex_visit_argouml(self, node):
     '''Visit an argouml node during latex rendering.'''
     render_latex(self, node, node['code'], node['options'])
+
     
 def setup(app):
     '''Register the services of this phix plug-in with Sphinx.'''
