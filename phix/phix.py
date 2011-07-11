@@ -15,24 +15,41 @@ from sphinx.util.compat import Directive
 from sphinx.util.osutil import ensuredir
 from sphinx.errors import SphinxError
 
+
 class PhixError(SphinxError):
+    '''The base Phix exception type.
+    '''
     category = 'Phix error'
 
+    
 class argouml(nodes.General, nodes.Element):
+    '''A docutils node representing an ArgoUML diagram''''
     
     def astext(self):
+        '''
+        Returns:
+            The 'alt' text for the node as specified by the :alt: option on
+            the argouml directive.
+        '''
         return self.get('alt', '')
-    
-# TODO: visit_argouml_node, depart_todo_node ?
-    
-class ArgoUmlDirective(Directive):
-    # <http://docutils.sourceforge.net/docs/howto/rst-directives.html>
 
+        
+class ArgoUmlDirective(Directive):
+    '''The argouml directive.
+ 
+    The implementation of directives is covered at
+      http://docutils.sourceforge.net/docs/howto/rst-directives.html
+    '''
     align_h_values = ('left', 'center', 'right')
     align_v_values = ('top', 'middle', 'bottom')
     align_values = align_v_values + align_h_values
 
     def align(argument):
+        '''Convert and validate the :align: option.
+        
+        Args:
+            argument: The argument passed to the :align: option.
+        '''
         # This is not callable as self.align.  We cannot make it a
         # staticmethod because we're saving an unbound method in
         # option_spec below.
@@ -42,6 +59,7 @@ class ArgoUmlDirective(Directive):
     required_arguments = 1
     optional_arguments = 0
     final_argument_whitespace = True
+    
     option_spec = {'diagram': directives.unchanged_required,
                    'pipe'   : directives.unchanged,
                    'alt': directives.unchanged,
@@ -53,6 +71,10 @@ class ArgoUmlDirective(Directive):
                    'class': directives.class_option}
     
     def run(self):
+        '''Process the argouml directive.
+        
+        Creates and returns an list of nodes, including an argouml node.
+        '''
         print "self.arguments[0] =", self.arguments[0]
 
         messages = []
@@ -102,6 +124,20 @@ class ArgoUmlDirective(Directive):
 
 # compatibility to sphinx 1.0 (ported from sphinx trunk)
 def relfn2path(env, filename, docname=None):
+    '''Convert a filename into a relatve path and an absolute path.
+    
+    Args:
+        env:
+        
+        filename: A relative path from the document to an external resource,
+            such as an image.
+        
+        docname:
+        
+    Returns:
+        A 2-tuple containing in the first element the relative path to filename
+        from the document path, and in the second element       
+    '''
     if filename.startswith('/') or filename.startswith(os.sep):
         rel_fn = filename[1:]
     else:
@@ -117,7 +153,7 @@ def relfn2path(env, filename, docname=None):
         return rel_fn, os.path.join(env.srcdir, enc_rel_fn)
         
 def get_image_filename(self, uri, diagram):
-    """
+    '''
     Get paths of output file.
     
     Args:
@@ -128,8 +164,9 @@ def get_image_filename(self, uri, diagram):
     Returns:
         A 2-tuple containing two paths.  The first is a relative URI which can
         be used in the output HTML to refer to the produced image file. The
-        second is an absolute path to which the generated image should be rendered.
-    """
+        second is an absolute path to which the generated image should be
+        rendered.
+    '''
     uri_dirname, uri_filename = os.path.split(uri)
     uri_basename, uri_ext = os.path.splitext(uri_filename)
     fname = '%s-%s.svg' % (uri_basename, diagram.replace(' ', '_'))
@@ -151,7 +188,7 @@ def get_image_filename(self, uri, diagram):
     return refer_path, render_path
 
 def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=None):
-    """
+    '''
     Use ArgoUML in batch mode to render a named diagram from a zargo file into
     graphics of the specified format.
     
@@ -168,7 +205,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, pipe_command=Non
     
     Raises:
         PhixError: If the graphics could not be rendered.
-    """
+    '''
     
     print "create_graphics()"
     print "zargo_uri =", zargo_uri
@@ -247,6 +284,19 @@ def argouml_command():
     
     
 def render_html(self, node):
+    '''
+    Render the supplied node as HTML. 
+    
+    Note: This method *always* raises docutils.nodes.SkipNode to ensure that the
+        child nodes are not visited.
+    
+    Args:
+        node: An argouml docutils node.
+        
+    Raises:
+        SkipNode: Do not visit the current node's children, and do not call the
+        current node's ``depart_...`` method.
+    '''
     has_thumbnail = False
     
     try:
@@ -270,12 +320,15 @@ def render_html(self, node):
     raise nodes.SkipNode
         
 def html_visit_argouml(self, node):
+    '''Visit an argouml node during HTML rendering.'''
     render_html(self, node)
 
 def latex_visit_argouml(self, node):
+    '''Visit an argouml node during latex rendering.'''
     render_latex(self, node, node['code'], node['options'])
     
 def setup(app):
+    '''Register the services of this phix plug-in with Sphinx.'''
     app.add_node(argouml,
         html=(html_visit_argouml, None))
         #latex=(latex_visit_argouml, None))
