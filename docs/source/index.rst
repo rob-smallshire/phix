@@ -47,9 +47,7 @@ The full list of supported options is:
   * `postprocess` - Pipe the SVG output from ArgoUML through this command before
     embedding the output in the HTML.  This option can be used with arbitrary
     programs to tweak the SVG output. Phix understands how to expand environment
-    variables in the command string using a cross-platform `$VAR` syntax.
-    Commands will be executed using the underlying shell, so underlying platform
-    dependent shell syntax may also be used.    
+    variables in the command string using a cross-platform `$VAR` syntax.    
    
 Indices and tables
 ==================
