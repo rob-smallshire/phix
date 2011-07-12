@@ -4,6 +4,7 @@ import subprocess
 import shlex
 import platform
 import tempfile
+import string
 
 from docutils import nodes, utils
 from docutils import nodes
@@ -235,7 +236,15 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
     # If a postprocess command has been specified
     if postprocess_command is not None:
         print "postprocess_command =", postprocess_command
-        postprocess_command_fragments = shlex.split(str(postprocess_command), posix=False)
+        
+        # We use our own variable interpolation with the $VAR syntax rather than
+        # relying on the underlying shell, so that we can support the same
+        # variable syntax on both Windows and Linux.
+        postprocess_command_template = string.Template(str(postprocess_command))
+        interpolated_postprocess_command = postprocess_command_template.substitute(os.environ)
+        print "interpolated_postprocess_command =", interpolated_postprocess_command
+        
+        postprocess_command_fragments = shlex.split(interpolated_postprocess_command, posix=False)
         print "postprocess_command_fragments =", postprocess_command_fragments
         with file(output_path, 'rb') as intermediate_file:
             with file(render_path, 'wb') as render_file:
@@ -265,7 +274,7 @@ def temp_path(suffix=''):
 def argouml_command():
     '''Get a command for launching ArgoUML.
     
-    Returns a list based on the ARGOUML_LAUNCH environment variable is set, this
+    Returns a list based on the ARGOUML_LAUNCH environment variable if set. This
     will be used as the basis for the list of arguments that is returned.
     Otherwise, it takes a guess at something that will work for the platform.
     
