@@ -13,7 +13,7 @@ file.  The most basic usage is::
 
   .. argouml:: my_uml_model.zargo
      :diagram: My Class Diagram
-     
+
 which will result in a single diagram being placed in the rendered HTML output
 from Sphinx.
 
@@ -25,30 +25,30 @@ output::
      :width: 100%
      :height: 800 px
      :new-window:
-     
+
 The full list of supported options is:
 
   * `diagram` - compulsory option for specifying the name of the diagram which
     is to be included.
-    
+
   * `width` - the width of the diagram, either as a percentage or in absolute
     units such as pixels.  Any units which can be used in HTML can be used here.
-    
+
   * `height` - the height of the diagram, either as a percentage or in absolute
     units such as pixels.  Any units which can be used in HTML can be used here.
-    
+
   * `new-window` - an optional flag which takes no arguments.  If present, a
     link `Open in new window` will be added underneath the rendered diagram.
-    
+
   * `align` - Can take the values `left`, `right`, `center`.
-  
+
   * `alt` - Alternative text to be used if the diagram cannot be rendered.
-  
+
   * `postprocess` - Pipe the SVG output from ArgoUML through this command before
     embedding the output in the HTML.  This option can be used with arbitrary
     programs to tweak the SVG output. Phix understands how to expand environment
-    variables in the command string using a cross-platform `$VAR` syntax.    
-   
+    variables in the command string using a cross-platform `$VAR` syntax.
+
 Indices and tables
 ==================
 

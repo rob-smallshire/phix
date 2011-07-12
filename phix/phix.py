@@ -22,10 +22,10 @@ class PhixError(SphinxError):
     '''
     category = 'Phix error'
 
-    
+
 class argouml(nodes.General, nodes.Element):
     '''A docutils node representing an ArgoUML diagram'''
-    
+
     def astext(self):
         '''
         Returns:
@@ -34,10 +34,10 @@ class argouml(nodes.General, nodes.Element):
         '''
         return self.get('alt', '')
 
-        
+
 class ArgoUmlDirective(Directive):
     '''The argouml directive.
- 
+
     The implementation of directives is covered at
       http://docutils.sourceforge.net/docs/howto/rst-directives.html
     '''
@@ -47,7 +47,7 @@ class ArgoUmlDirective(Directive):
 
     def align(argument):
         '''Convert and validate the :align: option.
-        
+
         Args:
             argument: The argument passed to the :align: option.
         '''
@@ -60,7 +60,7 @@ class ArgoUmlDirective(Directive):
     required_arguments = 1
     optional_arguments = 0
     final_argument_whitespace = True
-    
+
     option_spec = {'diagram': directives.unchanged_required,
                    'postprocess'   : directives.unchanged,
                    'new-window' : directives.flag,
@@ -71,26 +71,26 @@ class ArgoUmlDirective(Directive):
                    'align': align,
                    'border': directives.positive_int,
                    'class': directives.class_option}
-    
+
     def run(self):
         '''Process the argouml directive.
-        
+
         Creates and returns an list of nodes, including an argouml node.
         '''
         print "self.arguments[0] =", self.arguments[0]
 
         messages = []
-        
+
         # Get the one and only argument of the directive which contains the
         # name of the ArgoUML zargo file.
         reference = directives.uri(self.arguments[0])
         env = self.state.document.settings.env
         _, filename = relfn2path(env, reference)
         print "filename = ", filename
-        
+
         # Get the name of the diagram from the required :diagram: option
         diagram = self.options['diagram']
-                
+
         # Validate the :align: option
         if 'align' in self.options:
             if isinstance(self.state, states.SubstitutionDef):
@@ -108,12 +108,12 @@ class ArgoUmlDirective(Directive):
                     'the "align" option.  Valid values for "align" are: "%s".'
                     % (self.name, self.options['align'],
                        '", "'.join(self.align_h_values)))
-                       
+
         set_classes(self.options)
-        
+
         print "self.block_text =", self.block_text
         print "self.options =", self.options
-        
+
         argouml_node = argouml(self.block_text, **self.options)
         argouml_node['uri'] = os.path.normpath(filename)
         argouml_node['diagram'] = diagram
@@ -125,21 +125,21 @@ class ArgoUmlDirective(Directive):
         print "argouml_node['new_window_flag'] =", argouml_node['new_window_flag']
         return messages + [argouml_node]
 
-        
+
 def relfn2path(env, filename, docname=None):
     '''Convert a filename into a relatve path and an absolute path.
-    
+
     Args:
         env:
-        
+
         filename: A relative path from the document to an external resource,
             such as an image.
-        
+
         docname:
-        
+
     Returns:
         A 2-tuple containing in the first element the relative path to filename
-        from the document path, and in the second element       
+        from the document path, and in the second element
     '''
     # compatibility to sphinx 1.0 (ported from sphinx trunk)
     if filename.startswith('/') or filename.startswith(os.sep):
@@ -156,16 +156,16 @@ def relfn2path(env, filename, docname=None):
         enc_rel_fn = rel_fn.encode(sys.getfilesystemencoding())
         return rel_fn, os.path.join(env.srcdir, enc_rel_fn)
 
-        
+
 def get_image_filename(self, uri, diagram):
     '''
     Get paths of output file.
-    
+
     Args:
         uri: The URI of the source ArgoUML file
-        
+
         diagram: The name of theh diagram within the ArgoUML file to be rendered.
-    
+
     Returns:
         A 2-tuple containing two paths.  The first is a relative URI which can
         be used in the output HTML to refer to the produced image file. The
@@ -192,27 +192,27 @@ def get_image_filename(self, uri, diagram):
 
     return refer_path, render_path
 
-    
+
 def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_command=None):
     '''
     Use ArgoUML in batch mode to render a named diagram from a zargo file into
     graphics of the specified format.
-    
+
     Args:
         zargo_uri:  The path to the ArgoUML zargo file.
-        
+
         diagram_name: A string containing the diagram name.
-        
+
         render_path: The path to which the graphics output is to be rendered.
-        
+
         postprocess_command: An optional command into which the ArgoUML SVG
            output will be piped before it is placed in the output document.
            The command should accept SVG on stdin and produce SVG on stdout.
-    
+
     Raises:
         PhixError: If the graphics could not be rendered.
     '''
-        
+
     print "create_graphics()"
     print "zargo_uri =", zargo_uri
     print "diagram_name =", diagram_name
@@ -220,7 +220,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
 
     output_path = render_path if postprocess_command is None else temp_path('.svg')
     print "output_path =", output_path
-    
+
     # Launch ArgoUML and instruct it to export the requested diagram as SVG
     args = ['-batch',
             '-command', 'org.argouml.uml.ui.ActionOpenProject=%s' % str(zargo_uri),
@@ -232,18 +232,18 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
     print "returncode =", returncode
     if returncode != 0:
         raise PhixError("Could not launch ArgoUML with command %s" % ' '.join(command))
-        
+
     # If a postprocess command has been specified
     if postprocess_command is not None:
         print "postprocess_command =", postprocess_command
-        
+
         # We use our own variable interpolation with the $VAR syntax rather than
         # relying on the underlying shell, so that we can support the same
         # variable syntax on both Windows and Linux.
         postprocess_command_template = string.Template(str(postprocess_command))
         interpolated_postprocess_command = postprocess_command_template.substitute(os.environ)
         print "interpolated_postprocess_command =", interpolated_postprocess_command
-        
+
         postprocess_command_fragments = shlex.split(interpolated_postprocess_command, posix=False)
         print "postprocess_command_fragments =", postprocess_command_fragments
         with file(output_path, 'rb') as intermediate_file:
@@ -255,12 +255,12 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
         if os.path.exists(output_path):
             print "Removing", output_path
             os.remove(output_path)
-            
-            
+
+
 def temp_path(suffix=''):
     '''Return a path to a temporary file. It is the responsibility of the
     calling code to ensure that the file is deleted.
-    
+
     Args:
         suffix: Optional suffix for the temp file name.
     '''
@@ -269,15 +269,15 @@ def temp_path(suffix=''):
     fd, filename = tempfile.mkstemp(suffix)
     os.close(fd)
     return filename
-    
+
 
 def argouml_command():
     '''Get a command for launching ArgoUML.
-    
+
     Returns a list based on the ARGOUML_LAUNCH environment variable if set. This
     will be used as the basis for the list of arguments that is returned.
     Otherwise, it takes a guess at something that will work for the platform.
-    
+
     Returns:
         A list of command line arguments - the first of which is an executable
         name or alias - which when passed to a shell can be used to launch
@@ -285,33 +285,33 @@ def argouml_command():
     '''
     if 'ARGOUML_LAUNCH' in os.environ:
         return shlex.split(os.environ['ARGOUML_LAUNCH'])
-        
+
     if platform.system() == 'Windows':
         # This is the location used by the ArgoUML installer for Windows
         # It requires that 'java' is available on the syatem %PATH%.
         return [r"java",
                "-Xms64m", "-Xmx512m",
                "-jar", r"C:\Program Files (x86)\ArgoUML\argouml.jar"]
-               
+
     return ['argouml']
-    
-    
+
+
 def render_html(self, node):
     '''
-    Render the supplied node as HTML. 
-    
+    Render the supplied node as HTML.
+
     Note: This method *always* raises docutils.nodes.SkipNode to ensure that the
         child nodes are not visited.
-    
+
     Args:
         node: An argouml docutils node.
-        
+
     Raises:
         SkipNode: Do not visit the current node's children, and do not call the
         current node's ``depart_...`` method.
     '''
     has_thumbnail = False
-    
+
     try:
         refer_path, render_path = get_image_filename(self, node['uri'], node['diagram'])
         print "refer_path =", refer_path
@@ -329,27 +329,27 @@ def render_html(self, node):
     objtag_format = '<object data="%s" width="%s" height="%s" border="%s" type="image/svg+xml" class="img">\n'
     self.body.append(objtag_format % (refer_path, node['width'], node['height'], node['border']))
     self.body.append('</object>')
-    
+
     if node['new_window_flag']:
         self.body.append('<p align="right">\n')
         new_window_tag_format = '<a href="%s" target="_blank">Open in new window</a>'
         self.body.append(new_window_tag_format % refer_path)
         self.body.append('</p>\n')
-    
+
     self.body.append('</p>\n')
     raise nodes.SkipNode
 
-    
+
 def html_visit_argouml(self, node):
     '''Visit an argouml node during HTML rendering.'''
     render_html(self, node)
 
-    
+
 def latex_visit_argouml(self, node):
     '''Visit an argouml node during latex rendering.'''
     render_latex(self, node, node['code'], node['options'])
 
-    
+
 def setup(app):
     '''Register the services of this phix plug-in with Sphinx.'''
     app.add_node(argouml,
