@@ -318,7 +318,7 @@ def render_html(self, node):
         print "render_path =", render_path
         print "node['uri'] =", node['uri']
         #if not os.path.isfile(render_path):
-        create_graphics(self, node['uri'], node['diagram'], render_path, node['postprocess'])
+        create_graphics(self, node['uri'], node['diagram'], render_path, node.get('postprocess'))
     except PhixError, exc:
         print 'Could not render %s because %s' % (node['uri'], str(exc))
         self.builder.warn('Could not render %s because %s' % (node['uri'], str(exc)))
