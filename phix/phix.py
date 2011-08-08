@@ -291,7 +291,7 @@ def argouml_command():
         # It requires that 'java' is available on the syatem %PATH%.
         return [r"java",
                "-Xms64m", "-Xmx512m",
-               "-jar", r"C:\Program Files (x86)\ArgoUML\argouml.jar"]
+               "-jar", os.path.join(program_files_32(), "ArgoUML\argouml.jar"])
 
     return ['argouml']
 
@@ -349,6 +349,21 @@ def latex_visit_argouml(self, node):
     '''Visit an argouml node during latex rendering.'''
     render_latex(self, node, node['code'], node['options'])
 
+def is_64_windows():
+    return 'PROGRAMFILES(X86)' in os.environ
+
+def program_files_32():
+    if is_64_windows():
+        return os.environ['PROGRAMFILES(X86)']
+    else:
+        return os.environ['PROGRAMFILES']
+
+def program_files_64():
+    if is_64_windows():
+        return os.environ['PROGRAMW6432']
+    else:
+        return None
+    
 
 def setup(app):
     '''Register the services of this phix plug-in with Sphinx.'''
