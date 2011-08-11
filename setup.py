@@ -20,7 +20,7 @@ setup(
     long_description=long_description,
     zip_safe=False,
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',

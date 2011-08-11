@@ -291,7 +291,7 @@ def argouml_command():
         # It requires that 'java' is available on the syatem %PATH%.
         return [r"java",
                "-Xms64m", "-Xmx512m",
-               "-jar", os.path.join(program_files_32(), "ArgoUML\argouml.jar"])
+               "-jar", os.path.join(program_files_32(), "ArgoUML", "argouml.jar")]
 
     return ['argouml']
 
