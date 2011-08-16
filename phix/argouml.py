@@ -1,4 +1,4 @@
-import os, platform, posixpath, subprocess, shlex, string
+import logging, os, platform, posixpath, subprocess, shlex, string
 
 from docutils import nodes
 from docutils.parsers.rst import directives, states
@@ -11,6 +11,9 @@ from .phix import (PhixError,
                    program_files_32,
                    relfn2path,
                    temp_path)
+
+log = logging.getLogger('phix.argouml')
+logging.basicConfig()
 
 class argouml(nodes.General, nodes.Element):
     '''A docutils node representing an ArgoUML diagram'''
@@ -66,7 +69,7 @@ class ArgoUmlDirective(Directive):
 
         Creates and returns an list of nodes, including an argouml node.
         '''
-        print "self.arguments[0] =", self.arguments[0]
+        log.info('self.arguments[0] = {0}'.format(self.arguments[0]))
 
         messages = []
 
@@ -75,7 +78,7 @@ class ArgoUmlDirective(Directive):
         reference = directives.uri(self.arguments[0])
         env = self.state.document.settings.env
         _, filename = relfn2path(env, reference)
-        print "filename = ", filename
+        log.info('filename = {0}'.format(filename))
 
         # Get the name of the diagram from the required :diagram: option
         diagram = self.options['diagram']
@@ -100,8 +103,8 @@ class ArgoUmlDirective(Directive):
 
         set_classes(self.options)
 
-        print "self.block_text =", self.block_text
-        print "self.options =", self.options
+        log.info("self.block_text = {0}".format(self.block_text))
+        log.info("self.options = {0}".format(self.options))
 
         argouml_node = argouml(self.block_text, **self.options)
         argouml_node['uri'] = os.path.normpath(filename)
@@ -111,7 +114,10 @@ class ArgoUmlDirective(Directive):
         argouml_node['border'] = self.options['border'] if 'border' in self.options else 0
         argouml_node['postprocess_command'] = self.options['postprocess'] if 'postprocess' in self.options else None
         argouml_node['new_window_flag'] = 'new-window' in self.options
-        print "argouml_node['new_window_flag'] =", argouml_node['new_window_flag']
+        
+        log.info("argouml_node['new_window_flag'] = {0}".format(
+                argouml_node['new_window_flag']))
+        
         return messages + [argouml_node]
 
 def get_image_filename(self, uri, diagram):
@@ -132,7 +138,9 @@ def get_image_filename(self, uri, diagram):
     uri_dirname, uri_filename = os.path.split(uri)
     uri_basename, uri_ext = os.path.splitext(uri_filename)
     fname = '%s-%s.svg' % (uri_basename, diagram.replace(' ', '_'))
-    print "fname =", fname
+    
+    log.info('fname = {0}'.format(fname))
+    
     if hasattr(self.builder, 'imgpath'):
         # HTML
         refer_path = posixpath.join(self.builder.imgpath, fname)
@@ -168,14 +176,14 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
     Raises:
         PhixError: If the graphics could not be rendered.
     '''
-
-    print "create_graphics()"
-    print "zargo_uri =", zargo_uri
-    print "diagram_name =", diagram_name
-    print "render_path =", render_path
+    
+    log.info("create_graphics()")
+    log.info("zargo_uri = {0}".format(zargo_uri))
+    log.info("diagram_name = {0}".format(diagram_name))
+    log.info("render_path = {0}".format(render_path))
 
     output_path = render_path if postprocess_command is None else temp_path('.svg')
-    print "output_path =", output_path
+    log.info("output_path = {0}".format(output_path))
 
     # Launch ArgoUML and instruct it to export the requested diagram as SVG
     args = ['-batch',
@@ -183,33 +191,36 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
             '-command', 'org.argouml.ui.cmd.ActionGotoDiagram=%s' % str(diagram_name),
             '-command', 'org.argouml.uml.ui.ActionSaveGraphics=%s' % str(output_path)]
     command = argouml_command() + args
-    print "command =", command
+    log.info("command = {0}".format(command))
     returncode = subprocess.call(command)
-    print "returncode =", returncode
+    log.info("returncode = {0}".format(returncode))
     if returncode != 0:
         raise PhixError("Could not launch ArgoUML with command %s" % ' '.join(command))
 
     # If a postprocess command has been specified
     if postprocess_command is not None:
-        print "postprocess_command =", postprocess_command
+        log.info("postprocess_command = {0}".format(postprocess_command))
 
         # We use our own variable interpolation with the $VAR syntax rather than
         # relying on the underlying shell, so that we can support the same
         # variable syntax on both Windows and Linux.
         postprocess_command_template = string.Template(str(postprocess_command))
         interpolated_postprocess_command = postprocess_command_template.substitute(os.environ)
-        print "interpolated_postprocess_command =", interpolated_postprocess_command
+        log.info("interpolated_postprocess_command = {0}".format(
+                interpolated_postprocess_command))
 
         postprocess_command_fragments = shlex.split(interpolated_postprocess_command, posix=False)
-        print "postprocess_command_fragments =", postprocess_command_fragments
+        log.info("postprocess_command_fragments = {0}".format(
+                postprocess_command_fragments))
+        
         with file(output_path, 'rb') as intermediate_file:
             with file(render_path, 'wb') as render_file:
                 returncode = subprocess.call(postprocess_command_fragments, stdin=intermediate_file, stdout=render_file)
-                print "returncode =", returncode
+                log.info("returncode = {0}".format(returncode))
                 if returncode != 0:
                     raise PhixError("Could not launch postprocess with command %s" % ' '.join(postprocess_command))
         if os.path.exists(output_path):
-            print "Removing", output_path
+            log.info("Removing {0}".format(output_path))
             os.remove(output_path)
 
 def argouml_command():
@@ -254,13 +265,14 @@ def render_html(self, node):
 
     try:
         refer_path, render_path = get_image_filename(self, node['uri'], node['diagram'])
-        print "refer_path =", refer_path
-        print "render_path =", render_path
-        print "node['uri'] =", node['uri']
+        log.info("refer_path = {0}".format(refer_path))
+        log.info("render_path = {0}".format(render_path))
+        log.info("node['uri'] = {0}".format(node['uri']))
         #if not os.path.isfile(render_path):
         create_graphics(self, node['uri'], node['diagram'], render_path, node.get('postprocess'))
     except PhixError, exc:
-        print 'Could not render %s because %s' % (node['uri'], str(exc))
+        log.info('Could not render {0} because {1}'.format(
+                node['uri'], str(exc)))
         self.builder.warn('Could not render %s because %s' % (node['uri'], str(exc)))
         raise nodes.SkipNode
 
