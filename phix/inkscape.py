@@ -12,21 +12,21 @@ from .phix import (PhixError,
                    relfn2path,
                    temp_path)
 
-log = logging.getLogger('phix.dia')
+log = logging.getLogger('phix.inkscape')
 logging.basicConfig()
 
-class dia(nodes.General, nodes.Element):
-    '''A docutils node representing a Dia diagram'''
+class inkscape(nodes.General, nodes.Element):
+    '''A docutils node representing a Inkscape diagram'''
 
     def astext(self):
         '''
         Returns:
             The 'alt' text for the node as specified by the :alt: option on
-            the dia directive.
+            the inkscape directive.
         '''
         return self.get('alt', '')
 
-class DiaDirective(Directive):
+class InkscapeDirective(Directive):
     '''The argouml directive.
 
     The implementation of directives is covered at
@@ -63,9 +63,9 @@ class DiaDirective(Directive):
                    'class': directives.class_option}
 
     def run(self):
-        '''Process the dia directive.
+        '''Process the inkscape directive.
 
-        Creates and returns an list of nodes, including a dia node.
+        Creates and returns an list of nodes, including a inkscape node.
         '''
 
         log.info('self.arguments[0] = {0}'.format(self.arguments[0]))
@@ -73,7 +73,7 @@ class DiaDirective(Directive):
         messages = []
 
         # Get the one and only argument of the directive which contains the
-        # name of the Dia file.
+        # name of the Inkscape file.
         reference = directives.uri(self.arguments[0])
         env = self.state.document.settings.env
         _, filename = relfn2path(env, reference)
@@ -105,25 +105,25 @@ class DiaDirective(Directive):
         log.info("self.block_text = {0}".format(self.block_text))
         log.info("self.options = {0}".format(self.options))
 
-        dia_node = dia(self.block_text, **self.options)
-        dia_node['uri'] = os.path.normpath(filename)
-        dia_node['width'] = self.options['width'] if 'width' in self.options else '100%'
-        dia_node['height'] = self.options['height'] if 'height' in self.options else '100%'
-        dia_node['border'] = self.options['border'] if 'border' in self.options else 0
-        dia_node['postprocess_command'] = self.options['postprocess'] if 'postprocess' in self.options else None
-        dia_node['new_window_flag'] = 'new-window' in self.options
+        inkscape_node = inkscape(self.block_text, **self.options)
+        inkscape_node['uri'] = os.path.normpath(filename)
+        inkscape_node['width'] = self.options['width'] if 'width' in self.options else '100%'
+        inkscape_node['height'] = self.options['height'] if 'height' in self.options else '100%'
+        inkscape_node['border'] = self.options['border'] if 'border' in self.options else 0
+        inkscape_node['postprocess_command'] = self.options['postprocess'] if 'postprocess' in self.options else None
+        inkscape_node['new_window_flag'] = 'new-window' in self.options
 
-        log.info("dia_node['new_window_flag'] = {0}".format(
-                dia_node['new_window_flag']))
+        log.info("inkscape_node['new_window_flag'] = {0}".format(
+                inkscape_node['new_window_flag']))
 
-        return messages + [dia_node]
+        return messages + [inkscape_node]
 
 def get_image_filename(self, uri):
     '''
     Get paths of output file.
 
     Args:
-        uri: The URI of the source Dia file
+        uri: The URI of the source Inkscape file
 
     Returns:
         A 2-tuple containing two paths.  The first is a relative URI which can
@@ -153,17 +153,17 @@ def get_image_filename(self, uri):
 
     return refer_path, render_path
 
-def create_graphics(self, dia_uri, render_path, postprocess_command=None):
+def create_graphics(self, inkscape_uri, render_path, postprocess_command=None):
     '''
-    Use Dia in batch mode to render a diagram from a dia file into graphics of
-    the specified format.
+    Use Inkscape in batch mode to render a diagram from a Inkscape file into
+    graphics of the specified format.
 
     Args:
-        dia_uri:  The path to the Dia file.
+        inkscape_uri:  The path to the Inkscape file.
 
         render_path: The path to which the graphics output is to be rendered.
 
-        postprocess_command: An optional command into which the Dia SVG
+        postprocess_command: An optional command into which the Inkscape SVG
            output will be piped before it is placed in the output document.
            The command should accept SVG on stdin and produce SVG on stdout.
 
@@ -172,21 +172,23 @@ def create_graphics(self, dia_uri, render_path, postprocess_command=None):
     '''
 
     log.info("create_graphics()")
-    log.info("dia_uri = {0}".format(dia_uri))
+    log.info("inkscape_uri = {0}".format(inkscape_uri))
     log.info("render_path = {0}".format(render_path))
 
     output_path = render_path if postprocess_command is None else temp_path('.svg')
     log.info("output_path = {0}".format(output_path))
 
-    # Launch Dia and instruct it to export the diagram as SVG
-    args = [str(dia_uri),
-            '-e', str(output_path)]
-    command = dia_command() + args
+    # Launch Inkscape and instruct it to export the diagram as SVG
+    args = [str(inkscape_uri),
+    	    '--vacuum-defs',
+            '--export-plain-svg={0}'.format(str(output_path))]
+            
+    command = inkscape_command() + args
     log.info("command = {0}".format(command))
     returncode = subprocess.call(command)
     log.info("returncode = {0}".format(returncode))
     if returncode != 0:
-        raise PhixError("Could not launch Dia with command {0}".format(' '.join(command)))
+        raise PhixError("Could not launch Inkscape with command {0}".format(' '.join(command)))
 
     # If a postprocess command has been specified
     if postprocess_command is not None:
@@ -214,26 +216,26 @@ def create_graphics(self, dia_uri, render_path, postprocess_command=None):
             log.info("Removing {0}".format(output_path))
             os.remove(output_path)
 
-def dia_command():
-    '''Get a command for launching Dia.
+def inkscape_command():
+    '''Get a command for launching Inkscape.
 
-    Returns a list based on the DIA_LAUNCH environment variable if set. This
-    will be used as the basis for the list of arguments that is returned.
+    Returns a list based on the INKSCAPE_LAUNCH environment variable if set.
+    This will be used as the basis for the list of arguments that is returned.
     Otherwise, it takes a guess at something that will work for the platform.
 
     Returns:
         A list of command line arguments - the first of which is an executable
         name or alias - which when passed to a shell can be used to launch
-        dia.
+        Inkscape.
     '''
-    if 'DIA_LAUNCH' in os.environ:
-        return shlex.split(os.environ['DIA_LAUNCH'])
+    if 'INKSCAPE_LAUNCH' in os.environ:
+        return shlex.split(os.environ['INKSCAPE_LAUNCH'])
 
     if platform.system() == 'Windows':
-        # This is the location used by the Dia installer for Windows
-        return [os.path.join(program_files_32(), "Dia", "bin", "diaw.exe")]
+        # This is the location used by the Inkscape installer for Windows
+        return [os.path.join(program_files_32(), "Inkscape", "inkscape.exe")]
 
-    return ['dia']
+    return ['inkscape']
 
 def render_html(self, node):
     '''
@@ -243,7 +245,7 @@ def render_html(self, node):
         child nodes are not visited.
 
     Args:
-        node: An dia docutils node.
+        node: An inkscape docutils node.
 
     Raises:
         SkipNode: Do not visit the current node's children, and do not call the
@@ -265,7 +267,7 @@ def render_html(self, node):
                 node['uri'], str(exc)))
         raise nodes.SkipNode
 
-    self.body.append(self.starttag(node, 'p', CLASS='dia'))
+    self.body.append(self.starttag(node, 'p', CLASS='inkscape'))
 
     objtag_format = '<object data="%s" width="%s" height="%s" border="%s" type="image/svg+xml" class="img">\n'
     self.body.append(objtag_format % (refer_path, node['width'], node['height'], node['border']))
@@ -280,16 +282,16 @@ def render_html(self, node):
     self.body.append('</p>\n')
     raise nodes.SkipNode
 
-def html_visit_dia(self, node):
-    '''Visit an dia node during HTML rendering.'''
+def html_visit_inkscape(self, node):
+    '''Visit an inkscape node during HTML rendering.'''
     render_html(self, node)
 
-def latex_visit_dia(self, node):
-    '''Visit an dia node during latex rendering.'''
+def latex_visit_inkscape(self, node):
+    '''Visit an inkscape node during latex rendering.'''
     render_latex(self, node, node['code'], node['options'])
 
 def setup(app):
     '''Register the services of this plug-in with Sphinx.'''
-    app.add_node(dia,
-        html=(html_visit_dia, None))
-    app.add_directive('dia', DiaDirective)
+    app.add_node(inkscape,
+        html=(html_visit_inkscape, None))
+    app.add_directive('inkscape', InkscapeDirective)
