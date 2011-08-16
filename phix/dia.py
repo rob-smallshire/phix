@@ -1,4 +1,4 @@
-import logging, os, posixpath, subprocess, shlex, string
+import logging, os, platform, posixpath, subprocess, shlex, string
 
 from docutils import nodes
 from docutils.parsers.rst import directives, states
@@ -7,7 +7,10 @@ from docutils.parsers.rst.roles import set_classes
 from sphinx.util.compat import Directive
 from sphinx.util.osutil import ensuredir
 
-from .phix import PhixError, relfn2path, temp_path
+from .phix import (PhixError,
+                   program_files_32,
+                   relfn2path,
+                   temp_path)
 
 log = logging.getLogger('phix.dia')
 logging.basicConfig()
@@ -156,7 +159,7 @@ def create_graphics(self, dia_uri, render_path, postprocess_command=None):
     graphics of the specified format.
 
     Args:
-        zargo_uri:  The path to the Dia zargo file.
+        dia_uri:  The path to the Dia file.
 
         render_path: The path to which the graphics output is to be rendered.
 
@@ -226,7 +229,10 @@ def dia_command():
     if 'DIA_LAUNCH' in os.environ:
         return shlex.split(os.environ['DIA_LAUNCH'])
 
-    # TODO: Test this on windoze.
+    if platform.system() == 'Windows':
+        # This is the location used by the Dia installer for Windows
+        return [os.path.join(program_files_32(), "Dia", "bin", "diaw.exe")]
+
     return ['dia']
 
 def render_html(self, node):
