@@ -10,7 +10,7 @@ requires = ['Sphinx>=0.6']
 setup(
     name='phix',
     packages=['phix'],
-    version='0.5',
+    version='0.6',
     url='http://code.google.com/p/phix/',
     download_url='http://pypi.python.org/pypi/phix',
     license='BSD',
