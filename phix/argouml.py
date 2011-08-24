@@ -191,7 +191,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
             '-command', 'org.argouml.ui.cmd.ActionGotoDiagram=%s' % str(diagram_name),
             '-command', 'org.argouml.uml.ui.ActionSaveGraphics=%s' % str(output_path)]
     command = argouml_command() + args
-    log.info("command = {0}".format(command))
+    log.info("command = {0}".format(' '.join(command)))
     returncode = subprocess.call(command)
     log.info("returncode = {0}".format(returncode))
     if returncode != 0:
@@ -218,7 +218,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
                 returncode = subprocess.call(postprocess_command_fragments, stdin=intermediate_file, stdout=render_file)
                 log.info("returncode = {0}".format(returncode))
                 if returncode != 0:
-                    raise PhixError("Could not launch postprocess with command %s" % ' '.join(postprocess_command))
+                    raise PhixError("Could not launch postprocess with command %s" % postprocess_command)
         if os.path.exists(output_path):
             log.info("Removing {0}".format(output_path))
             os.remove(output_path)
