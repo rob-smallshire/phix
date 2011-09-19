@@ -114,10 +114,10 @@ class ArgoUmlDirective(Directive):
         argouml_node['border'] = self.options['border'] if 'border' in self.options else 0
         argouml_node['postprocess_command'] = self.options['postprocess'] if 'postprocess' in self.options else None
         argouml_node['new_window_flag'] = 'new-window' in self.options
-        
+
         log.info("argouml_node['new_window_flag'] = {0}".format(
                 argouml_node['new_window_flag']))
-        
+
         return messages + [argouml_node]
 
 def get_image_filename(self, uri, diagram):
@@ -138,9 +138,9 @@ def get_image_filename(self, uri, diagram):
     uri_dirname, uri_filename = os.path.split(uri)
     uri_basename, uri_ext = os.path.splitext(uri_filename)
     fname = '%s-%s.svg' % (uri_basename, diagram.replace(' ', '_'))
-    
+
     log.info('fname = {0}'.format(fname))
-    
+
     if hasattr(self.builder, 'imgpath'):
         # HTML
         refer_path = posixpath.join(self.builder.imgpath, fname)
@@ -176,7 +176,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
     Raises:
         PhixError: If the graphics could not be rendered.
     '''
-    
+
     log.info("create_graphics()")
     log.info("zargo_uri = {0}".format(zargo_uri))
     log.info("diagram_name = {0}".format(diagram_name))
@@ -197,6 +197,13 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
     if returncode != 0:
         raise PhixError("Could not launch ArgoUML with command %s" % ' '.join(command))
 
+    # See if the output file doesn't exist. This is a good indicator
+    # that the wrong diagram was selected in the directive.
+    if not os.path.exists(output_path):
+        raise PhixError(
+            'The output SVG file {0} does not exist. This often means that you specified the wrong diagram in your argouml directive.'.format(
+                output_path))
+
     # If a postprocess command has been specified
     if postprocess_command is not None:
         log.info("postprocess_command = {0}".format(postprocess_command))
@@ -212,7 +219,7 @@ def create_graphics(self, zargo_uri, diagram_name, render_path, postprocess_comm
         postprocess_command_fragments = shlex.split(interpolated_postprocess_command, posix=False)
         log.info("postprocess_command_fragments = {0}".format(
                 postprocess_command_fragments))
-        
+
         with file(output_path, 'rb') as intermediate_file:
             with file(render_path, 'wb') as render_file:
                 returncode = subprocess.call(postprocess_command_fragments, stdin=intermediate_file, stdout=render_file)
