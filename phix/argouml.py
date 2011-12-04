@@ -259,8 +259,9 @@ def render_html(self, node):
         exc = sys.exc_info()
         log.info('Could not render {0}'.format(node['uri']),
                  exc_info = exc)
-        self.builder.warn('Could not render {0}'.format(node['uri']),
-                          exc_info=exc)
+        self.builder.warn('Could not render {0} because of {1}'.format(
+                node['uri'],
+                exc[1]))
         raise nodes.SkipNode
 
     self.body.append(self.starttag(node, 'p', CLASS='argouml'))
