@@ -8,7 +8,13 @@ import subprocess
 import shlex
 import re
 import string
-import urllib
+import sys
+
+if sys.version_info.major == 2:
+    from urllib import urlencode, urlopen, urlretrieve
+else:
+    from urllib.parse import urlencode
+    from urllib.request import urlopen, urlretrieve
 
 from docutils import nodes
 from docutils.parsers.rst import directives, states
@@ -225,9 +231,9 @@ def retrieve_diagram(text,
     request["apiVersion"] = api_version
     request['format'] = 'svg'
 
-    url = urllib.urlencode(request)
+    url = urlencode(request)
 
-    f = urllib.urlopen(server_url, url)
+    f = urlopen(server_url, url)
     line = f.readline()
     f.close()
 
@@ -240,7 +246,7 @@ def retrieve_diagram(text,
     if m == None:
         raise PhixError("Invalid response from server: {0}".format(line))
 
-    urllib.urlretrieve(
+    urlretrieve(
         server_url + m.group(0),
         output_file)
 
@@ -310,8 +316,8 @@ def create_graphics(self,
         log.info("postprocess_command_fragments = {0}".format(
                 postprocess_command_fragments))
 
-        with file(output_path, 'rb') as intermediate_file:
-            with file(render_path, 'wb') as render_file:
+        with open(output_path, 'rb') as intermediate_file:
+            with open(render_path, 'wb') as render_file:
                 returncode = subprocess.call(postprocess_command_fragments, stdin=intermediate_file, stdout=render_file)
                 log.info("returncode = {0}".format(returncode))
                 if returncode != 0:
@@ -349,11 +355,12 @@ def render_html(self, node):
                         style=node['style'],
                         api_version=node['api_version'],
                         server_url=node['server_url'])
-    except PhixError, exc:
-        log.info('Could not render {0} because {1}'.format(
-                node['uri'], str(exc)))
-        self.builder.warn('Could not render {0} because {1}'.format(
-                node['uri'], str(exc)))
+    except PhixError:
+        exc = sys.exc_info()
+        log.info('Could not render {0}'.format(node['uri']),
+                 exc_info = exc)
+        self.builder.warn('Could not render {0}'.format(node['uri']),
+                          exc_info=exc)
         raise nodes.SkipNode
 
     self.body.append(self.starttag(node, 'p', CLASS='dia'))

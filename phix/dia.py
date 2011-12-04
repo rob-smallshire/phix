@@ -1,4 +1,4 @@
-import logging, os, platform, posixpath, subprocess, shlex, string
+import logging, os, platform, posixpath, subprocess, shlex, string, sys
 
 from docutils import nodes
 from docutils.parsers.rst import directives, states
@@ -204,8 +204,8 @@ def create_graphics(self, dia_uri, render_path, postprocess_command=None):
         log.info("postprocess_command_fragments = {0}".format(
                 postprocess_command_fragments))
 
-        with file(output_path, 'rb') as intermediate_file:
-            with file(render_path, 'wb') as render_file:
+        with open(output_path, 'rb') as intermediate_file:
+            with open(render_path, 'wb') as render_file:
                 returncode = subprocess.call(postprocess_command_fragments, stdin=intermediate_file, stdout=render_file)
                 log.info("returncode = {0}".format(returncode))
                 if returncode != 0:
@@ -258,11 +258,12 @@ def render_html(self, node):
         log.info("node['uri'] = {0}".format(node['uri']))
         #if not os.path.isfile(render_path):
         create_graphics(self, node['uri'], render_path, node.get('postprocess'))
-    except PhixError, exc:
-        log.info('Could not render {0} because {1}'.format(
-                node['uri'], str(exc)))
-        self.builder.warn('Could not render {0} because {1}'.format(
-                node['uri'], str(exc)))
+    except PhixError:
+        exc = sys.exc_info()
+        log.info('Could not render {0}'.format(node['uri']),
+                 exc_info = exc)
+        self.builder.warn('Could not render {0}'.format(node['uri']),
+                          exc_info=exc)
         raise nodes.SkipNode
 
     self.body.append(self.starttag(node, 'p', CLASS='dia'))
