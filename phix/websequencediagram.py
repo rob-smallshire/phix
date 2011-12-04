@@ -233,7 +233,7 @@ def retrieve_diagram(text,
 
     url = urlencode(request)
 
-    f = urlopen(server_url, url)
+    f = urlopen(server_url, url.encode())
     line = f.readline()
     f.close()
 
@@ -241,7 +241,7 @@ def retrieve_diagram(text,
             line))
 
     expr = re.compile("(\?(png|pdf|svg)=[a-zA-Z0-9]+)")
-    m = expr.search(line)
+    m = expr.search(line.decode())
 
     if m == None:
         raise PhixError("Invalid response from server: {0}".format(line))
@@ -359,8 +359,9 @@ def render_html(self, node):
         exc = sys.exc_info()
         log.info('Could not render {0}'.format(node['uri']),
                  exc_info = exc)
-        self.builder.warn('Could not render {0}'.format(node['uri']),
-                          exc_info=exc)
+        self.builder.warn('Could not render {0} because of {1}'.format(
+                node['uri'],
+                exc[1]))
         raise nodes.SkipNode
 
     self.body.append(self.starttag(node, 'p', CLASS='dia'))
