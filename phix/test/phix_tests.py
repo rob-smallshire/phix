@@ -53,6 +53,11 @@ class Tests(unittest.TestCase):
         '''
         build_project('argouml_project')
 
+    def test_inkscape(self):
+        '''Build a project using the inkscape extension.
+        '''
+        build_project('inkscape_project')
+
 if __name__ == '__main__':
     unittest.main()
 
