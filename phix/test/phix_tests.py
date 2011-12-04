@@ -58,6 +58,11 @@ class Tests(unittest.TestCase):
         '''
         build_project('inkscape_project')
 
+    def test_websequencediagrams(self):
+        '''Build a project using the WSD extension.
+        '''
+        build_project('websequencediagram_project')
+
 if __name__ == '__main__':
     unittest.main()
 
